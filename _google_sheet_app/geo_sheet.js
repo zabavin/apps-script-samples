@@ -317,5 +317,125 @@ function isInPoly(polygon,point)
 	return isIn;
 }
 
+//--------------------------------------------------------------------------------------------------------------
+/**
+ * Calculate the distance between two
+ * locations on Google Maps.
+ *
+ * =GOOGLEMAPS_DISTANCE("NY 10005", "Hoboken NJ", "walking")
+ *
+ * @param {String} origin The address of starting point
+ * @param {String} destination The address of destination
+ * @param {String} mode The mode of travel (driving, walking, bicycling or transit)
+ * @return {String} The distance in miles
+ * @customFunction
+ */
+const GOOGLEMAPS_DISTANCE = (origin, destination, mode) => {
+  const { routes: [data] = [] } = Maps.newDirectionFinder()
+    .setOrigin(origin)
+    .setDestination(destination)
+    .setMode(mode)
+    .getDirections();
+
+  if (!data) {
+    throw new Error('No route found!');
+  }
+
+  const { legs: [{ distance: { text: distance } } = {}] = [] } = data;
+  return distance;
+};
+//-----------------------------------------------------------------------------------
+/**
+ * Use Reverse Geocoding to get the address of
+ * a point location (latitude, longitude) on Google Maps.
+ *
+ * =GOOGLEMAPS_REVERSEGEOCODE(latitude, longitude)
+ *
+ * @param {String} latitude The latitude to lookup.
+ * @param {String} longitude The longitude to lookup.
+ * @return {String} The postal address of the point.
+ * @customFunction
+ */
+
+const GOOGLEMAPS_REVERSEGEOCODE = (latitude, longitude) => {
+  const { results: [data = {}] = [] } = Maps.newGeocoder().reverseGeocode(latitude, longitude);
+  return data.formatted_address;
+};
+
+//----------------------------------------------------------------------------
+/**
+ * Get the latitude and longitude of any
+ * address on Google Maps.
+ *
+ * =GOOGLEMAPS_LATLONG("10 Hanover Square, NY")
+ *
+ * @param {String} address The address to lookup.
+ * @return {String} The latitude and longitude of the address.
+ * @customFunction
+ */
+const GOOGLEMAPS_LATLONG = (address) => {
+  const { results: [data = null] = [] } = Maps.newGeocoder().geocode(address);
+  if (data === null) {
+    throw new Error('Address not found!');
+  }
+  const { geometry: { location: { lat, lng } } = {} } = data;
+  return `${lat}, ${lng}`;
+};
+//--------------------------------------------------------------------------
+/**
+ * Find the driving direction between two
+ * locations on Google Maps.
+ *
+ * =GOOGLEMAPS_DIRECTIONS("NY 10005", "Hoboken NJ", "walking")
+ *
+ * @param {String} origin The address of starting point
+ * @param {String} destination The address of destination
+ * @param {String} mode The mode of travel (driving, walking, bicycling or transit)
+ * @return {String} The driving direction
+ * @customFunction
+ */
+const GOOGLEMAPS_DIRECTIONS = (origin, destination, mode = 'driving') => {
+  const { routes = [] } = Maps.newDirectionFinder()
+    .setOrigin(origin)
+    .setDestination(destination)
+    .setMode(mode)
+    .getDirections();
+  if (!routes.length) {
+    throw new Error('No route found!');
+  }
+  return routes
+    .map(({ legs }) => {
+      return legs.map(({ steps }) => {
+        return steps.map((step) => {
+          return step.html_instructions.replace(/<[^>]+>/g, '');
+        });
+      });
+    })
+    .join(', ');
+};
+
+///-------------------------------------------------------------------------------
+
+/**
+ * Generate a Google Maps Link for any address
+ *
+ * @param {string} address - The postal address
+ * @param {boolean} satellite - Show aerial view (TRUE or FALSE)
+ * @returns {string} The Google Maps URL
+ * @customFunction
+ */
+
+function GOOGLEMAPSLINK(address, satellite) {
+  function createLink(query) {
+    const baseUrl = "https://maps.google.com/?q=" + encodeURIComponent(query);
+    const mapsUrl = baseUrl + (satellite ? "&t=k" : "");
+    return mapsUrl;
+  }
+
+  return Array.isArray(address)
+    ? address.map(createLink)
+    : createLink(address);
+}
+
 
 
